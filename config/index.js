@@ -1,3 +1,7 @@
+const dotenv = require("dotenv");
+const path = require("path");
+dotenv.config({ path: path.join(__dirname, "../process.env") });
+
 const config = {
   mySQLConfig: {
     connectionLimit: 5,
