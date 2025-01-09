@@ -1,2 +1,4 @@
 process.env
 node_modules
+lambda
+lambda/
