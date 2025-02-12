@@ -1,6 +1,32 @@
 import { mysqlPool } from "./config.js";
 import openai from "openai";
 
+async function generateSummary(data, prompt) {
+  try {
+    const client = new openai.OpenAI();
+    const result = await client.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: prompt,
+        },
+        {
+          role: "user",
+          content: JSON.stringify(data),
+        },
+      ],
+      model: "gpt-4o-mini",
+    });
+
+    const summary = result.choices[0].message.content;
+
+    return summary;
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
+
 const helperFunctions = {
   getSleepLogs: async function (userId, endDate) {
     const pool = await mysqlPool;
@@ -75,34 +101,52 @@ const helperFunctions = {
     return result;
   },
 
-  generateSummary: async function (reports) {
+  generateSleepSummary: async function (reports) {
     try {
-      const client = new openai.OpenAI();
-      const result = await client.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content:
-              "I have a weekly check-in and I want to summarize my sleep habits for my bodybuilding coach. Analyze the lastest weekly entry with relation to the previous weeks in 50 words or less without using full sentences. Don't give any advice--just comment on trends.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify(reports),
-          },
-        ],
-        model: "gpt-4o-mini",
-      });
-
-      const summary = result.choices[0].message.content;
-
-      return summary;
+      return generateSummary(
+        reports,
+        "I have a weekly check-in and I want to summarize my sleep habits for my bodybuilding coach. Analyze the lastest weekly entry with relation to the previous weeks in 50 words or less without using full sentences. Don't give any advice--just comment on trends."
+      );
     } catch (e) {
       console.error(e);
       throw e;
     }
   },
 
-  uploadToPrepro: async function (endDate, averages, userId, summary) {
+  getComments: async function (userId, startDate, endDate) {
+    const pool = await mysqlPool;
+    const [result] = await pool.query(
+      `
+    select date, comments from workoutLogs
+    where userId = ?
+    and date >= ?
+    and date < ?
+    `,
+      [userId, startDate, endDate]
+    );
+
+    return result;
+  },
+
+  generateTrainingSummary: async function (reports) {
+    try {
+      return generateSummary(
+        reports,
+        "I have a weekly check-in and I want to summarize my training comments for my bodybuilding coach. Summarize these comments in 50 words or less without using full sentences. Don't give any advice--just comment on trends."
+      );
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  },
+
+  uploadToPrepro: async function (
+    endDate,
+    averages,
+    userId,
+    sleepSummary,
+    trainingSummary
+  ) {
     const {
       avgTotalSleep,
       avgTotalBed,
@@ -119,7 +163,8 @@ const helperFunctions = {
           avgRecoveryIndex = ?,
           avgRemQty = ?,
           avgDeepQty = ?,
-          recoveryAnalysis = ?
+          recoveryAnalysis = ?,
+          trainingAnalysis = ?
         where date = ?
         and userId = ?
         `,
@@ -129,7 +174,8 @@ const helperFunctions = {
         avgRecoveryIndex,
         avgRemQty,
         avgDeepQty,
-        summary,
+        sleepSummary,
+        trainingSummary,
         endDate,
         userId,
       ]

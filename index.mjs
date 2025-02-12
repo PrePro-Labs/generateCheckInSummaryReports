@@ -38,12 +38,37 @@ export const handler = async (event) => {
     // Generating summary of data
     const reports = [{ ...averages, date: date }, ...historical];
     console.log("-- Generating AI summary of sleep", new Date());
-    const summary = await helperFunctions.generateSummary(reports);
+    const sleepSummary = await helperFunctions.generateSleepSummary(reports);
     console.log("-- Generated AI summary of sleep", new Date());
+
+    // gathering training comments
+    console.log("-- Getting prepro training log comments", new Date());
+    const lastCheckIn = historical[0] || {};
+    const comments = await helperFunctions.getComments(
+      userId,
+      date,
+      lastCheckIn.date
+    );
+    console.log(`-- Got ${comments.length} training log comments`, new Date());
+
+    // generating summary of training
+    console.log("-- Generating AI summary of training", new Date());
+    const trainingSummary = await helperFunctions.generateTrainingSummary(
+      comments
+    );
+    console.log("-- Generated AI summary of training", new Date());
+
+    console.log("summary", trainingSummary);
 
     // Updating prepro
     console.log("-- Updating PrePro", new Date());
-    await helperFunctions.uploadToPrepro(date, averages, userId, summary);
+    await helperFunctions.uploadToPrepro(
+      date,
+      averages,
+      userId,
+      sleepSummary,
+      trainingSummary
+    );
     console.log("-- PrePro updated", new Date());
 
     const response = {
