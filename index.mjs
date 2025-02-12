@@ -42,13 +42,13 @@ export const handler = async (event) => {
     console.log("-- Generated AI summary of sleep", new Date());
 
     // gathering training comments
-    console.log("-- Getting prepro training log comments", new Date());
-    const lastCheckIn = historical[0] || {};
-    const comments = await helperFunctions.getComments(
-      userId,
-      date,
-      lastCheckIn.date
+    const lastCheckIn = reports[1] || {};
+    const lastDate = lastCheckIn.date;
+    console.log(
+      `-- Getting prepro training log comments between ${lastDate} and ${date}`,
+      new Date()
     );
+    const comments = await helperFunctions.getComments(userId, lastDate, date);
     console.log(`-- Got ${comments.length} training log comments`, new Date());
 
     // generating summary of training
